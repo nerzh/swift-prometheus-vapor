@@ -30,14 +30,14 @@ final class MetricsController {
     }
 
     private func getTimeDiff(_ d: Double = 1) -> Int {
-//        guard let scriptDir = Environment.get("ScriptDir") else { return 0 }
-//        let command = "cd \(scriptDir)/ && ./check_node_sync_status.sh"
-//        if let out = try? systemCommand(command),
-//           let maybeTimeDiff = out.regexp(#"TIME_DIFF.+(-*\d+)"#)[1],
-//           let timeDiff = Int(maybeTimeDiff)
-//        {
-//            return timeDiff
-//        }
+        guard let scriptDir = Environment.get("ScriptDir") else { return 0 }
+        let command = "cd \(scriptDir)/ && ./check_node_sync_status.sh"
+        if let out = try? systemCommand(command),
+           let maybeTimeDiff = out.regexp(#"TIME_DIFF.+(-*\d+)"#)[1],
+           let timeDiff = Int(maybeTimeDiff)
+        {
+            return timeDiff
+        }
 
         return 0
     }
