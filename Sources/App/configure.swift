@@ -1,4 +1,6 @@
 import Vapor
+import Metrics
+import Prometheus
 
 // configures your application
 public func configure(_ app: Application) throws {
@@ -10,6 +12,9 @@ public func configure(_ app: Application) throws {
 
     app.http.server.configuration.port = Int(Environment.get("Port") ?? "8080") ?? 8080
     app.http.server.configuration.hostname = Environment.get("Host") ?? "127.0.0.1"
+
+    let prometheusClient = PrometheusClient()
+    MetricsSystem.bootstrap(prometheusClient)
 
     try routes(app)
 }
