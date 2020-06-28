@@ -18,8 +18,10 @@ final class MetricsController {
 
     func index(_ req: Request) throws -> EventLoopFuture<String> {
         let prometheusClient: PrometheusClient = try! MetricsSystem.prometheus()
+        let metric: DiskLoad = getDiskLoad()
+        indexGroup.wait()
         setTimeDiffMetric(prometheusClient)
-        setDiskMetric(prometheusClient)
+        setDiskMetric(metric)
         let promise: EventLoopPromise = req.eventLoop.next().makePromise(of: String.self)
         prometheusClient.collect(promise.succeed)
 
@@ -35,8 +37,7 @@ final class MetricsController {
         gauge.set(timeDiff)
     }
 
-    private func setDiskMetric(_ prom: PrometheusClient) {
-        let metric = getDiskLoad()
+    private func setDiskMetric(_ metric: DiskLoad) {
         let diskLoadName: String = "diskLoad"
         let diskLoadRead: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "read")])
         let diskLoadWrite: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "write")])
@@ -89,7 +90,8 @@ final class MetricsController {
         return 0
     }
 
-    private func getDiskLoad() -> (load: SwiftLinuxStat.DiskLoad, iops: SwiftLinuxStat.DiskIOs, busy: SwiftLinuxStat.Percent) {
+    typealias DiskLoad = (load: SwiftLinuxStat.DiskLoad, iops: SwiftLinuxStat.DiskIOs, busy: SwiftLinuxStat.Percent)
+    private func getDiskLoad() -> DiskLoad {
         let disk: SwiftLinuxStat.Disk = .init()
         indexGroup.enter()
         Thread {
