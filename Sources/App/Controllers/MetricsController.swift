@@ -44,11 +44,17 @@ final class MetricsController {
         let diskLoadBusy: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "busy")])
         let diskLoadIOsRead: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "IOsRead")])
         let diskLoadIOsWrite: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "IOsWrite")])
-        diskLoadRead.record(metric.load.read)
-        diskLoadWrite.record(metric.load.write)
-        diskLoadBusy.record(metric.busy)
-        diskLoadIOsRead.record(metric.iops.readIOs)
-        diskLoadIOsWrite.record(metric.iops.writeIOs)
+//        diskLoadRead.record(metric.load.read)
+//        diskLoadWrite.record(metric.load.write)
+//        diskLoadBusy.record(metric.busy)
+//        diskLoadIOsRead.record(metric.iops.readIOs)
+//        diskLoadIOsWrite.record(metric.iops.writeIOs)
+
+        diskLoadRead.record(111)
+        diskLoadWrite.record(222)
+        diskLoadBusy.record(333)
+        diskLoadIOsRead.record(444)
+        diskLoadIOsWrite.record(555)
     }
 
     private func setNetMetric(_ prom: PrometheusClient) {
