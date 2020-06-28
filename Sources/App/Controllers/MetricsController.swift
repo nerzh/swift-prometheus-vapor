@@ -18,10 +18,12 @@ final class MetricsController {
 
     func index(_ req: Request) throws -> EventLoopFuture<String> {
         let prometheusClient: PrometheusClient = try! MetricsSystem.prometheus()
-        let metric: DiskLoad = getDiskLoad()
-        indexGroup.wait()
         setTimeDiffMetric(prometheusClient)
-        setDiskMetric(metric)
+        getDiskLoad { (metric) in
+            self.setDiskMetric(metric)
+        }
+        indexGroup.wait()
+        
         let promise: EventLoopPromise = req.eventLoop.next().makePromise(of: String.self)
         prometheusClient.collect(promise.succeed)
 
@@ -44,17 +46,11 @@ final class MetricsController {
         let diskLoadBusy: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "busy")])
         let diskLoadIOsRead: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "IOsRead")])
         let diskLoadIOsWrite: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "IOsWrite")])
-//        diskLoadRead.record(metric.load.read)
-//        diskLoadWrite.record(metric.load.write)
-//        diskLoadBusy.record(metric.busy)
-//        diskLoadIOsRead.record(metric.iops.readIOs)
-//        diskLoadIOsWrite.record(metric.iops.writeIOs)
-
-        diskLoadRead.record(111)
-        diskLoadWrite.record(222)
-        diskLoadBusy.record(333)
-        diskLoadIOsRead.record(444)
-        diskLoadIOsWrite.record(555)
+        diskLoadRead.record(metric.load.read)
+        diskLoadWrite.record(metric.load.write)
+        diskLoadBusy.record(metric.busy)
+        diskLoadIOsRead.record(metric.iops.readIOs)
+        diskLoadIOsWrite.record(metric.iops.writeIOs)
     }
 
     private func setNetMetric(_ prom: PrometheusClient) {
@@ -97,23 +93,23 @@ final class MetricsController {
     }
 
     typealias DiskLoad = (load: SwiftLinuxStat.DiskLoad, iops: SwiftLinuxStat.DiskIOs, busy: SwiftLinuxStat.Percent)
-    private func getDiskLoad() -> DiskLoad {
+    private func getDiskLoad(_ handler: @escaping (DiskLoad) -> Void) {
         let disk: SwiftLinuxStat.Disk = .init()
         indexGroup.enter()
         Thread {
             disk.update()
+            let kb: Float = 1024
+            let mb: Float = kb * 1024
+            var diskLoad: SwiftLinuxStat.DiskLoad = disk.diskLoadPerSecond(current: false)
+            diskLoad.read = (diskLoad.read / mb).round(toDecimalPlaces: 3)
+            diskLoad.write = (diskLoad.write / mb).round(toDecimalPlaces: 3)
+
+            let diskBusy: SwiftLinuxStat.Percent = disk.diskBusy(current: false)
+            let diskIOs: SwiftLinuxStat.DiskIOs = disk.diskIOs(current: false)
+
+            handler((load: diskLoad, iops: diskIOs, busy: diskBusy))
             self.indexGroup.leave()
         }.start()
-        let kb: Float = 1024
-        let mb: Float = kb * 1024
-        var diskLoad: SwiftLinuxStat.DiskLoad = disk.diskLoadPerSecond(current: false)
-        diskLoad.read = (diskLoad.read / mb).round(toDecimalPlaces: 3)
-        diskLoad.write = (diskLoad.write / mb).round(toDecimalPlaces: 3)
-
-        let diskBusy: SwiftLinuxStat.Percent = disk.diskBusy(current: false)
-        let diskIOs: SwiftLinuxStat.DiskIOs = disk.diskIOs(current: false)
-
-        return (load: diskLoad, iops: diskIOs, busy: diskBusy)
     }
 
     private func getNetLoad() -> SwiftLinuxStat.NetLoad {
