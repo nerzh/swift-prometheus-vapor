@@ -19,6 +19,7 @@ final class MetricsController {
     func index(_ req: Request) throws -> EventLoopFuture<String> {
         let prometheusClient: PrometheusClient = try! MetricsSystem.prometheus()
         setTimeDiffMetric(prometheusClient)
+
         getDiskLoad { (metric) in
             self.setDiskMetric(metric)
         }
@@ -29,6 +30,8 @@ final class MetricsController {
             self.setCPUMetric(metric)
         }
         setMemMetric(getMemLoad())
+        setDiskSpaceMetric(getDiskSpace())
+
         indexGroup.wait()
 
         let promise: EventLoopPromise = req.eventLoop.next().makePromise(of: String.self)
@@ -53,6 +56,14 @@ final class MetricsController {
         Gauge(label: label, dimensions: [("type", "busy")]).record(metric.busy)
         Gauge(label: label, dimensions: [("type", "IOsRead")]).record(metric.iops.readIOs)
         Gauge(label: label, dimensions: [("type", "IOsWrite")]).record(metric.iops.writeIOs)
+    }
+
+    private func setDiskSpaceMetric(_ metric: SwiftLinuxStat.DiskSpace) {
+        let label: String = "diskSpace"
+        Gauge(label: label, dimensions: [("type", "size"), ("name", metric.name)]).record(metric.size)
+        Gauge(label: label, dimensions: [("type", "avail"), ("name", metric.name)]).record(metric.avail)
+        Gauge(label: label, dimensions: [("type", "used"), ("name", metric.name)]).record(metric.used)
+        Gauge(label: label, dimensions: [("type", "use"), ("name", metric.name)]).record(metric.use)
     }
 
     private func setNetMetric(_ metric: SwiftLinuxStat.NetLoad) {
@@ -91,6 +102,19 @@ final class MetricsController {
         return 0
     }
 
+    private func getDiskSpace() -> Int {
+        guard let scriptDir = Environment.get("ScriptDir") else { return 0 }
+        let command = "cd \(scriptDir)/ && ./check_node_sync_status.sh"
+        if let out = try? systemCommand(command),
+            let maybeTimeDiff = out.regexp(#"TIME_DIFF.+(-*\d+)"#)[1],
+            let timeDiff = Int(maybeTimeDiff)
+        {
+            return timeDiff
+        }
+
+        return 0
+    }
+
     typealias DiskLoad = (load: SwiftLinuxStat.DiskLoad, iops: SwiftLinuxStat.DiskIOs, busy: SwiftLinuxStat.Percent)
     private func getDiskLoad(_ handler: @escaping (DiskLoad) -> Void) {
         let disk: SwiftLinuxStat.Disk = .init()
@@ -109,6 +133,17 @@ final class MetricsController {
             handler((load: diskLoad, iops: diskIOs, busy: diskBusy))
             self.indexGroup.leave()
         }.start()
+    }
+
+    private func getDiskSpace() -> SwiftLinuxStat.DiskSpace {
+        let disk: SwiftLinuxStat.Disk = .init()
+        let mb: Float = 1024
+        var diskSpace: SwiftLinuxStat.DiskSpace = disk.diskSpace()
+        diskSpace.size = (diskSpace.size / mb).round(toDecimalPlaces: 2)
+        diskSpace.avail = (diskSpace.avail / mb).round(toDecimalPlaces: 2)
+        diskSpace.used = (diskSpace.used / mb).round(toDecimalPlaces: 2)
+
+        return diskSpace
     }
 
     private func getNetLoad(_ handler: @escaping (SwiftLinuxStat.NetLoad) -> Void) {

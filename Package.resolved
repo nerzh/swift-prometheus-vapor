@@ -141,8 +141,8 @@
         "repositoryURL": "https://github.com/nerzh/SwiftLinuxStat.git",
         "state": {
           "branch": null,
-          "revision": "4cfbded5897e546b2f298f037a9631f054a335b3",
-          "version": "0.5.1"
+          "revision": "53c86374dd9cd2e6bd42423379f64c005333fe4e",
+          "version": "0.5.5"
         }
       },
       {
