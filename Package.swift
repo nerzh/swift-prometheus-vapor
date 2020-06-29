@@ -15,7 +15,7 @@ let package = Package(
         .package(url: "https://github.com/vapor/vapor.git", from: "4.0.0"),
         .package(url: "https://github.com/MrLotU/SwiftPrometheus.git", from: "1.0.0-alpha"),
         .package(name: "SwiftExtensionsPack", url: "https://github.com/nerzh/swift-extensions-pack.git", .upToNextMajor(from: "0.4.1")),
-        .package(name: "SwiftLinuxStat", url: "https://github.com/nerzh/SwiftLinuxStat.git", .upToNextMajor(from: "0.5.0")),
+        .package(name: "SwiftLinuxStat", url: "https://github.com/nerzh/SwiftLinuxStat.git", .upToNextMajor(from: "0.5.1")),
 //        .package(name: "FileUtils", path: "/Users/nerzh/mydata/swift_projects/FileUtils"),
     ],
     targets: [
