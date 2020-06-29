@@ -22,8 +22,15 @@ final class MetricsController {
         getDiskLoad { (metric) in
             self.setDiskMetric(metric)
         }
+        getNetLoad { (metric) in
+            self.setNetMetric(metric)
+        }
+        getCPU { (metric) in
+            self.setCPUMetric(metric)
+        }
+        setMemMetric(getMemLoad())
         indexGroup.wait()
-        
+
         let promise: EventLoopPromise = req.eventLoop.next().makePromise(of: String.self)
         prometheusClient.collect(promise.succeed)
 
@@ -40,12 +47,12 @@ final class MetricsController {
     }
 
     private func setDiskMetric(_ metric: DiskLoad) {
-        let diskLoadName: String = "diskLoad"
-        let diskLoadRead: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "read")])
-        let diskLoadWrite: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "write")])
-        let diskLoadBusy: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "busy")])
-        let diskLoadIOsRead: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "IOsRead")])
-        let diskLoadIOsWrite: Gauge = Gauge(label: diskLoadName, dimensions: [("type", "IOsWrite")])
+        let label: String = "diskload"
+        let diskLoadRead: Gauge = Gauge(label: label, dimensions: [("type", "read")])
+        let diskLoadWrite: Gauge = Gauge(label: label, dimensions: [("type", "write")])
+        let diskLoadBusy: Gauge = Gauge(label: label, dimensions: [("type", "busy")])
+        let diskLoadIOsRead: Gauge = Gauge(label: label, dimensions: [("type", "IOsRead")])
+        let diskLoadIOsWrite: Gauge = Gauge(label: label, dimensions: [("type", "IOsWrite")])
         diskLoadRead.record(metric.load.read)
         diskLoadWrite.record(metric.load.write)
         diskLoadBusy.record(metric.busy)
@@ -53,28 +60,25 @@ final class MetricsController {
         diskLoadIOsWrite.record(metric.iops.writeIOs)
     }
 
-    private func setNetMetric(_ prom: PrometheusClient) {
-        let timeDiff = getTimeDiff()
-        let gauge = prom.createGauge(forType: Int.self, named: "TimeDiff")
-        //        gauge.inc() // Increment by 1
-        //        gauge.dec(19) // Decrement by given value
-        gauge.set(timeDiff)
+    private func setNetMetric(_ metric: SwiftLinuxStat.NetLoad) {
+        let label: String = "netload"
+        Gauge(label: label, dimensions: [("type", "receive")]).record(metric.receive)
+        Gauge(label: label, dimensions: [("type", "transmit")]).record(metric.transmit)
     }
 
-    private func setCPUMetric(_ prom: PrometheusClient) {
-        let timeDiff = getTimeDiff()
-        let gauge = prom.createGauge(forType: Int.self, named: "TimeDiff")
-        //        gauge.inc() // Increment by 1
-        //        gauge.dec(19) // Decrement by given value
-        gauge.set(timeDiff)
+    private func setCPUMetric(_ metric: SwiftLinuxStat.Percent) {
+        let label: String = "cpuload"
+        Gauge(label: label).record(metric)
     }
 
-    private func setMemMetric(_ prom: PrometheusClient) {
-        let timeDiff = getTimeDiff()
-        let gauge = prom.createGauge(forType: Int.self, named: "TimeDiff")
-        //        gauge.inc() // Increment by 1
-        //        gauge.dec(19) // Decrement by given value
-        gauge.set(timeDiff)
+    private func setMemMetric(_ metric: SwiftLinuxStat.MemLoad) {
+        let label: String = "memload"
+        Gauge(label: label, dimensions: [("type", "memTotal")]).record(metric.memTotal)
+        Gauge(label: label, dimensions: [("type", "memFree")]).record(metric.memFree)
+        Gauge(label: label, dimensions: [("type", "memAvail")]).record(metric.memAvailable)
+        Gauge(label: label, dimensions: [("type", "memBuffers")]).record(metric.buffers)
+        Gauge(label: label, dimensions: [("type", "swapTotal")]).record(metric.swapTotal)
+        Gauge(label: label, dimensions: [("type", "swapFree")]).record(metric.swapFree)
     }
 
 
@@ -101,8 +105,8 @@ final class MetricsController {
             let kb: Float = 1024
             let mb: Float = kb * 1024
             var diskLoad: SwiftLinuxStat.DiskLoad = disk.diskLoadPerSecond(current: false)
-            diskLoad.read = (diskLoad.read / mb).round(toDecimalPlaces: 3)
-            diskLoad.write = (diskLoad.write / mb).round(toDecimalPlaces: 3)
+            diskLoad.read = (diskLoad.read / mb).round(toDecimalPlaces: 2)
+            diskLoad.write = (diskLoad.write / mb).round(toDecimalPlaces: 2)
 
             let diskBusy: SwiftLinuxStat.Percent = disk.diskBusy(current: false)
             let diskIOs: SwiftLinuxStat.DiskIOs = disk.diskIOs(current: false)
@@ -112,32 +116,30 @@ final class MetricsController {
         }.start()
     }
 
-    private func getNetLoad() -> SwiftLinuxStat.NetLoad {
+    private func getNetLoad(_ handler: @escaping (SwiftLinuxStat.NetLoad) -> Void) {
         let net: SwiftLinuxStat.Net = .init()
         indexGroup.enter()
         Thread {
             net.update()
+            let kb: Float = 1024
+            let mb: Float = kb * 1024
+            var netLoad: SwiftLinuxStat.NetLoad = net.netLoadPerSecond(current: false)
+            netLoad.receive = (netLoad.receive / mb).round(toDecimalPlaces: 2)
+            netLoad.transmit = (netLoad.transmit / mb).round(toDecimalPlaces: 2)
+            handler(netLoad)
             self.indexGroup.leave()
         }.start()
-        let kb: Float = 1024
-        let mb: Float = kb * 1024
-        var netLoad: SwiftLinuxStat.NetLoad = net.netLoadPerSecond(current: false)
-        netLoad.receive = (netLoad.receive / mb).round(toDecimalPlaces: 3)
-        netLoad.transmit = (netLoad.transmit / mb).round(toDecimalPlaces: 3)
-
-        return netLoad
     }
 
-    private func getCPU() -> SwiftLinuxStat.Percent {
+    private func getCPU(_ handler: @escaping (SwiftLinuxStat.Percent) -> Void) {
         let cpu: SwiftLinuxStat.CPU = .init()
         indexGroup.enter()
         Thread {
             cpu.update()
+            let cpuLoad: SwiftLinuxStat.Percent = cpu.cpuLoad()
+            handler(cpuLoad)
             self.indexGroup.leave()
         }.start()
-        let cpuLoad: SwiftLinuxStat.Percent = cpu.cpuLoad()
-
-        return cpuLoad
     }
 
     private func getMemLoad() -> SwiftLinuxStat.MemLoad {
