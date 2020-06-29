@@ -48,16 +48,11 @@ final class MetricsController {
 
     private func setDiskMetric(_ metric: DiskLoad) {
         let label: String = "diskload"
-        let diskLoadRead: Gauge = Gauge(label: label, dimensions: [("type", "read")])
-        let diskLoadWrite: Gauge = Gauge(label: label, dimensions: [("type", "write")])
-        let diskLoadBusy: Gauge = Gauge(label: label, dimensions: [("type", "busy")])
-        let diskLoadIOsRead: Gauge = Gauge(label: label, dimensions: [("type", "IOsRead")])
-        let diskLoadIOsWrite: Gauge = Gauge(label: label, dimensions: [("type", "IOsWrite")])
-        diskLoadRead.record(metric.load.read)
-        diskLoadWrite.record(metric.load.write)
-        diskLoadBusy.record(metric.busy)
-        diskLoadIOsRead.record(metric.iops.readIOs)
-        diskLoadIOsWrite.record(metric.iops.writeIOs)
+        Gauge(label: label, dimensions: [("type", "read")]).record(metric.load.read)
+        Gauge(label: label, dimensions: [("type", "write")]).record(metric.load.write)
+        Gauge(label: label, dimensions: [("type", "busy")]).record(metric.busy)
+        Gauge(label: label, dimensions: [("type", "IOsRead")]).record(metric.iops.readIOs)
+        Gauge(label: label, dimensions: [("type", "IOsWrite")]).record(metric.iops.writeIOs)
     }
 
     private func setNetMetric(_ metric: SwiftLinuxStat.NetLoad) {
@@ -136,7 +131,7 @@ final class MetricsController {
         indexGroup.enter()
         Thread {
             cpu.update()
-            let cpuLoad: SwiftLinuxStat.Percent = cpu.cpuLoad()
+            let cpuLoad: SwiftLinuxStat.Percent = cpu.cpuLoad(current: false)
             handler(cpuLoad)
             self.indexGroup.leave()
         }.start()
