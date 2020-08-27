@@ -60,8 +60,8 @@
         "repositoryURL": "https://github.com/nerzh/swift-extensions-pack.git",
         "state": {
           "branch": null,
-          "revision": "3a676d5b996cf22f1b53e0a9ccb997cc181a8d65",
-          "version": "0.4.1"
+          "revision": "a1b23b74fa44201ab854dd636e2a72c8994aec9d",
+          "version": "0.4.6"
         }
       },
       {
@@ -123,8 +123,8 @@
         "repositoryURL": "https://github.com/nerzh/swift-regular-expression.git",
         "state": {
           "branch": null,
-          "revision": "957f5a37eff8e6a4efde69a32054e82428ae85a8",
-          "version": "0.2.2"
+          "revision": "9fb37cfb1898476c3eed153e52d8fd4f530bbead",
+          "version": "0.2.3"
         }
       },
       {
