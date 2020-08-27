@@ -87,54 +87,11 @@ final class MetricsController {
         Gauge(label: label, dimensions: [("type", "swapFree")]).record(metric.swapFree)
     }
 
-//    public func systemCommand(_ command: String, _ user: String? = nil, timeOut: Float? = nil) throws -> String {
-//        var result: String = .init()
-//        let process: Process = .init()
-//        let pipe: Pipe = .init()
-//        var timeOutThread: Thread?
-//        if let timeOut = timeOut {
-//            timeOutThread = Thread {
-//                let seconds: UInt32 = UInt32(timeOut * 1_000_000)
-//                usleep(seconds)
-//                process.terminate()
-//                process.interrupt()
-//                let a = pipe.fileHandleForReading.readToEnd()
-//            }
-//        }
-//        if user != nil {
-//            process.arguments = ["sudo", "-H", "-u", user!, "bash", "-lc", "\(command)"]
-//        } else {
-//            process.arguments = ["bash", "-lc", "\(command)"]
-//        }
-//        process.executableURL = .init(fileURLWithPath: "/usr/bin/env")
-//        process.standardOutput = pipe
-//        process.standardError = pipe
-//        process.processIdentifier
-//        process.terminationHandler = { process in
-//            print("HANDLER")
-//        }
-//        try process.run()
-//        pipe.fileHandleForReading.readToEnd()
-//        pipe.fileHandleForReading.readabilityHandler = { f in
-//            f.cl
-//        }
-//        let data: Data = pipe.fileHandleForReading.readDataToEndOfFile()
-//        if let output = String(data: data, encoding: .utf8) {
-//            result = output.trimmingCharacters(in: .whitespacesAndNewlines)
-//        }
-//        timeOutThread?.start()
-////        process.waitUntilExit()
-//        if process.isRunning { process.terminate() }
-//
-//        return result
-//    }
-
-
     // MARK: Collector Helpers
     private func getTimeDiff() -> Int {
         guard let scriptDir = Environment.get("ScriptDir") else { return 0 }
         let command = "cd \(scriptDir)/ && ./check_node_sync_status.sh"
-        if let out = try? systemCommand(command),
+        if let out = try? systemCommand(command, timeOutNanoseconds: 3_000_000),
             let maybeTimeDiff = out.regexp(#"TIME_DIFF.+?([-\d]+)"#)[1],
             let timeDiff = Int(maybeTimeDiff)
         {
