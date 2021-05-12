@@ -1,6 +1,6 @@
 //
 //  MetricsController.swift
-//  
+//
 //
 //  Created by Oleh Hudeichuk on 24.06.2020.
 //
@@ -40,7 +40,7 @@ final class MetricsController {
         return promise.futureResult
     }
 
-    
+
     private func setTimeDiffMetric(_ prom: PrometheusClient) {
         let timeDiff = getTimeDiff()
         let gauge = prom.createGauge(forType: Int.self, named: "TimeDiff")
@@ -92,7 +92,7 @@ final class MetricsController {
         guard let scriptDir = Environment.get("ScriptDir") else { return 0 }
         let command = "cd \(scriptDir)/ && ./check_node_sync_status.sh"
         if let out = try? systemCommand(command, timeOutNanoseconds: 3_000_000),
-            let maybeTimeDiff = out.regexp(#"TIME_DIFF.+?([-\d]+)"#)[1],
+            let maybeTimeDiff = out.regexp(#"(TIME_DIFF|timediff).+?([-\d]+)"#, [.caseInsensitive])[2],
             let timeDiff = Int(maybeTimeDiff)
         {
             return timeDiff
