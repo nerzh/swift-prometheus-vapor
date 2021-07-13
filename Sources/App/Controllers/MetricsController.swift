@@ -90,7 +90,7 @@ final class MetricsController {
     // MARK: Collector Helpers
     private func getTimeDiff() -> Int {
         guard let scriptDir = Environment.get("ScriptDir") else { return 0 }
-        let command = "cd \(scriptDir)/ && ./check_node_sync_status.sh"
+        let command = "cd \(scriptDir)/ && bash ./check_node_sync_status.sh"
         if let out = try? systemCommand(command, timeOutNanoseconds: 3_000_000),
             let maybeTimeDiff = out.regexp(#"(TIME_DIFF|timediff).+?([-\d]+)"#, [.caseInsensitive])[2],
             let timeDiff = Int(maybeTimeDiff)
