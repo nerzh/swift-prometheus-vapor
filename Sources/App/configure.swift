@@ -14,7 +14,7 @@ public func configure(_ app: Application) throws {
     app.http.server.configuration.hostname = Environment.get("Host") ?? "127.0.0.1"
 
     let prometheusClient = PrometheusClient()
-    MetricsSystem.bootstrap(prometheusClient)
+    MetricsSystem.bootstrap(PrometheusMetricsFactory(client: prometheusClient))
 
     try routes(app)
 }
